@@ -6,12 +6,13 @@
     <title>Guia Interativo de Ortopedia</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chosen Palette: Warm Neutrals (Beige, Off-white, Dark Gray, Muted Blue Accent) -->
-    <!-- Application Structure Plan: A thematic, single-page application with a fixed sidebar for navigation between four core modules: 'Fundamentos' (Anatomy/Physiology), 'Avaliação Ortopédica' (Clinical Exam/Terminology), 'Lesões Comuns' (Fracture Types), and 'Manobras' (Special Tests). This structure groups foundational knowledge separately from clinical application, facilitating focused learning. Interactivity is central, with clickable canvas diagrams for anatomy and animated stick-figure demonstrations for maneuvers. This design avoids a linear report-like structure in favor of an exploratory, tool-based approach, which is more effective for pre-rotation review and quick reference. -->
+    <!-- Application Structure Plan: A thematic, single-page application with a fixed sidebar for navigation between four core modules: 'Fundamentos' (Anatomy/Physiology), 'Avaliação Ortopédica' (Clinical Exam/Terminology), 'Lesões Comuns' (Fracture Types), and 'Manobras' (Special Tests). This structure groups foundational knowledge separately from clinical application, facilitating focused learning. Interactivity is central, with clickable canvas diagrams for anatomy, looping animations for movements, and fully animated stick-figure demonstrations for all special maneuvers. This design avoids a linear report-like structure in favor of an exploratory, tool-based approach, which is more effective for pre-rotation review and quick reference. -->
     <!-- Visualization & Content Choices:
         - Report Info: Macro/Micro bone anatomy. Goal: Inform/Organize. Viz: Interactive Canvas diagrams. Interaction: Click on anatomical parts to reveal text descriptions. Justification: Visual learning is key for anatomy; interaction promotes active engagement over passive reading. Method: HTML5 Canvas API with JS event listeners.
         - Report Info: Fracture healing stages. Goal: Show Change/Process. Viz: Clickable timeline with corresponding Canvas illustrations. Interaction: User clicks a stage to see its visual representation and description. Justification: Breaks down a complex process into manageable, visual steps. Method: HTML/CSS for timeline, Canvas for visuals.
-        - Report Info: Orthopedic maneuvers. Goal: Demonstrate/Instruct. Viz: Animated stick-figure diagrams on Canvas. Interaction: User selects a maneuver from a list, triggering a text description and a corresponding animation showing patient/examiner positioning and forces. Justification: Static images can be ambiguous; animation clearly demonstrates the dynamic nature of these tests. Method: HTML5 Canvas with requestAnimationFrame.
-        - Report Info: Terminology (deformities, movements). Goal: Define/Inform. Viz: Simple Canvas drawings of stick figures. Interaction: Select term to see illustration. Justification: Provides immediate visual context for abstract terms like 'valgo' or 'varus'. Method: HTML5 Canvas.
+        - Report Info: Terminology of movements. Goal: Demonstrate/Instruct. Viz: Looping stick-figure animations on Canvas. Interaction: User selects a term, triggering a continuous animation that clearly shows the movement. Justification: The looping animation removes ambiguity and provides a superior visual aid. Method: HTML5 Canvas with requestAnimationFrame.
+        - Report Info: Terminology (deformities, lesions). Goal: Define/Inform. Viz: Simple Canvas drawings. Interaction: Select term to see illustration. Justification: Provides immediate visual context for abstract terms like 'valgo' or 'varus'. Method: HTML5 Canvas.
+        - Report Info: Orthopedic maneuvers. Goal: Demonstrate/Instruct. Viz: Fully animated stick-figure diagrams on Canvas. Interaction: User selects a maneuver, triggering a looping animation showing patient/examiner positioning, movement, and applied forces. Justification: Animated demonstrations are far superior to static images for teaching complex, dynamic tests. Looping ensures the action is clear and easy to understand at a glance. Method: HTML5 Canvas with requestAnimationFrame.
         - CONFIRMING NO SVG/Mermaid. -->
     <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
     <style>
@@ -147,6 +148,10 @@
                 <div class="bg-white p-6 rounded-xl shadow-md mb-8">
                     <h3 class="text-xl font-bold mb-4">Terminologia de Lesões</h3>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="injury-terms"></div>
+                    <div class="mt-6 flex flex-col md:flex-row gap-6 items-center">
+                        <canvas id="injury-canvas" class="interactive-canvas w-full md:w-1/3" width="300" height="200"></canvas>
+                        <p id="injury-description" class="md:w-2/3 text-gray-700"></p>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -222,6 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
             activeSection: 'fundamentos',
             activeManeuver: null,
             animationFrameId: null,
+            activeMovement: null,
+            movementProgress: 0,
+            movementAnimationId: null,
         },
         
         elements: {
@@ -256,14 +264,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 4: { title: 'Remodelação Óssea (Meses a anos)', text: 'O osso imaturo é lentamente substituído por osso lamelar maduro e organizado, restaurando a forma e a força originais do osso, de acordo com as leis de Wolff.' }
             },
             injuryTerms: [
-                { name: 'Fratura', text: 'Solução de continuidade óssea, ou seja, a quebra de um osso.' },
-                { name: 'Luxação', text: 'Perda completa e permanente do contato entre as superfícies articulares de uma articulação.' },
-                { name: 'Subluxação', text: 'Perda parcial do contato entre as superfícies articulares.' },
-                { name: 'Entorse', text: 'Lesão dos ligamentos de uma articulação, sem deslocamento das superfícies articulares.' },
-                { name: 'Estiramento', text: 'Lesão de um músculo ou tendão devido ao alongamento excessivo.' },
-                { name: 'Contusão', text: 'Lesão causada por um trauma direto, sem quebra da pele, resultando em hematoma e edema.' },
-                { name: 'Avulsão', text: 'Arrancamento de um fragmento ósseo por uma contração muscular ou tração ligamentar súbita.' },
-                { name: 'Tendinite', text: 'Inflamação de um tendão.' },
+                { name: 'Fratura', id: 'fratura', text: 'Solução de continuidade óssea, ou seja, a quebra de um osso.' },
+                { name: 'Luxação', id: 'luxacao', text: 'Perda completa e permanente do contato entre as superfícies articulares de uma articulação.' },
+                { name: 'Subluxação', id: 'subluxacao', text: 'Perda parcial do contato entre as superfícies articulares.' },
+                { name: 'Entorse', id: 'entorse', text: 'Lesão dos ligamentos de uma articulação, sem deslocamento das superfícies articulares.' },
+                { name: 'Estiramento', id: 'estiramento', text: 'Lesão de um músculo ou tendão devido ao alongamento excessivo.' },
+                { name: 'Contusão', id: 'contusao', text: 'Lesão causada por um trauma direto, sem quebra da pele, resultando em hematoma e edema.' },
+                { name: 'Avulsão', id: 'avulsao', text: 'Arrancamento de um fragmento ósseo por uma contração muscular ou tração ligamentar súbita.' },
+                { name: 'Tendinite', id: 'tendinite', text: 'Inflamação de um tendão.' },
             ],
             movementTerms: {
                 flexao: { name: 'Flexão', description: 'Diminui o ângulo entre dois segmentos corporais.' },
@@ -361,7 +369,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.drawMicroAnatomy();
                 this.updateFractureHealing(1);
             } else if (sectionId === 'avaliacao') {
-                this.drawMovement('flexao');
+                this.updateInjuryDetails(this.data.injuryTerms[0].id);
+                this.startMovementAnimation('flexao');
                 this.drawDeformity('valgo');
             } else if (sectionId === 'lesoes') {
                 this.updateFractureType(this.data.fractureTypes[0].id);
@@ -374,7 +383,8 @@ document.addEventListener('DOMContentLoaded', () => {
              this.drawMacroAnatomy();
              this.drawMicroAnatomy();
              this.updateFractureHealing(1);
-             this.drawMovement('flexao');
+             this.updateInjuryDetails(this.data.injuryTerms[0].id);
+             this.startMovementAnimation('flexao');
              this.drawDeformity('valgo');
              this.updateFractureType(this.data.fractureTypes[0].id);
         },
@@ -610,10 +620,118 @@ document.addEventListener('DOMContentLoaded', () => {
                      const allItems = container.querySelectorAll('div');
                      allItems.forEach(i => i.classList.remove('bg-[var(--accent-color)]', 'text-white'));
                      div.classList.add('bg-[var(--accent-color)]', 'text-white');
-                     alert(`${term.name}: ${term.text}`);
+                     this.updateInjuryDetails(term.id);
                 };
                 container.appendChild(div);
             });
+        },
+        
+        updateInjuryDetails(id) {
+            const term = this.data.injuryTerms.find(t => t.id === id);
+            document.getElementById('injury-description').textContent = term.text;
+            this.drawInjuryType(id);
+        },
+        
+        drawInjuryType(id) {
+            const canvas = document.getElementById('injury-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const w = canvas.width;
+            const h = canvas.height;
+            const boneColor = '#d3c0a3';
+            const ligamentColor = '#a5d6a7';
+            const muscleColor = '#ef9a9a';
+            
+            switch(id) {
+                case 'fratura':
+                    ctx.fillStyle = boneColor;
+                    ctx.fillRect(w/2 - 20, 20, 40, h-40);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(w/2 - 20, h/2 - 5, 40, 10);
+                    break;
+                case 'luxacao':
+                    ctx.fillStyle = boneColor;
+                    ctx.fillRect(w/2 - 10, h/2 - 60, 20, 60);
+                    ctx.fillRect(w/2 - 10, h/2 + 20, 20, 60);
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(w/2, h/2 + 10, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'subluxacao':
+                    ctx.fillStyle = boneColor;
+                    ctx.fillRect(w/2 - 10, h/2 - 60, 20, 60);
+                    ctx.fillRect(w/2 - 10, h/2 + 10, 20, 60);
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(w/2, h/2 + 10, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'entorse':
+                    ctx.fillStyle = boneColor;
+                    ctx.fillRect(w/2 - 50, h/2 - 20, 40, 100);
+                    ctx.fillRect(w/2 + 10, h/2 - 20, 40, 100);
+                    ctx.strokeStyle = ligamentColor;
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(w/2 - 10, h/2 + 10);
+                    ctx.lineTo(w/2 + 10, h/2 + 10);
+                    ctx.stroke();
+                    ctx.strokeStyle = 'red';
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(w/2 - 10, h/2 + 10);
+                    ctx.lineTo(w/2 + 10, h/2 + 10);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                    break;
+                case 'estiramento':
+                    ctx.fillStyle = muscleColor;
+                    ctx.fillRect(w/2 - 40, h/2 - 20, 80, 40);
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(w/2 - 20, h/2);
+                    ctx.lineTo(w/2 + 20, h/2);
+                    ctx.stroke();
+                    break;
+                case 'contusao':
+                    ctx.fillStyle = boneColor;
+                    ctx.fillRect(w/2 - 40, h/2 - 50, 80, 100);
+                    ctx.fillStyle = 'rgba(139, 0, 0, 0.7)';
+                    ctx.beginPath();
+                    ctx.arc(w/2, h/2, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+                case 'avulsao':
+                    ctx.fillStyle = boneColor;
+                    ctx.fillRect(w/2 - 40, h/2 - 50, 80, 100);
+                    ctx.fillStyle = boneColor;
+                    ctx.beginPath();
+                    ctx.arc(w/2 + 40, h/2 + 20, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(w/2 + 30, h/2 + 20);
+                    ctx.lineTo(w/2 + 40, h/2 + 20);
+                    ctx.stroke();
+                    break;
+                case 'tendinite':
+                    ctx.fillStyle = boneColor;
+                    ctx.fillRect(w/2 - 40, h/2 - 50, 80, 100);
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(w/2, h/2 + 50);
+                    ctx.lineTo(w/2, h/2 - 50);
+                    ctx.stroke();
+                    ctx.fillStyle = 'red';
+                    ctx.beginPath();
+                    ctx.arc(w/2, h/2, 10, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+            }
         },
         
         setupMovementTerms() {
@@ -622,20 +740,35 @@ document.addEventListener('DOMContentLoaded', () => {
                 const btn = document.createElement('button');
                 btn.className = 'px-3 py-1 border rounded-full text-sm hover:bg-gray-200';
                 btn.textContent = this.data.movementTerms[key].name;
-                btn.onclick = () => this.drawMovement(key);
+                btn.onclick = () => this.startMovementAnimation(key);
                 container.appendChild(btn);
             });
         },
         
-        drawMovement(type) {
+        startMovementAnimation(type) {
+            if (this.state.movementAnimationId) {
+                cancelAnimationFrame(this.state.movementAnimationId);
+            }
+            this.state.activeMovement = type;
+            this.state.movementProgress = 0;
+            document.getElementById('movement-term-description').textContent = this.data.movementTerms[type].name;
+            this.animateMovementLoop();
+        },
+
+        animateMovementLoop() {
+            if (!this.state.activeMovement) return;
+            this.state.movementProgress = (this.state.movementProgress + 0.008) % 2;
+            this.drawMovement(this.state.activeMovement, this.state.movementProgress);
+            this.state.movementAnimationId = requestAnimationFrame(this.animateMovementLoop.bind(this));
+        },
+        
+        drawMovement(type, progress) {
             const canvas = document.getElementById('movement-canvas');
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const cx = canvas.width / 2;
             const cy = canvas.height / 2 + 30;
             
-            document.getElementById('movement-term-description').textContent = this.data.movementTerms[type].name;
-
             function drawPerson(armAngle, legAngle) {
                 ctx.lineWidth = 4;
                 ctx.strokeStyle = '#5A5A5A';
@@ -656,28 +789,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let arm = {x: 40, y: 0};
             let leg = {x: 30, y: 80};
-
+            let startArm = {x: 0, y: -40};
+            let endArm = {x: 0, y: -40};
+            let startLeg = {x: 30, y: 80};
+            let endLeg = {x: 30, y: 80};
+            
             switch(type) {
-                case 'flexao': arm = {x: 0, y: -50}; break;
-                case 'extensao': arm = {x: 30, y: 40}; break;
-                case 'abducao': leg = {x: 60, y: 70}; break;
-                case 'aducao': leg = {x: 10, y: 80}; break;
+                case 'flexao':
+                    endArm = {x: 0, y: -80};
+                    arm.y = startArm.y + (endArm.y - startArm.y) * Math.sin(progress * Math.PI);
+                    break;
+                case 'extensao':
+                    endArm = {x: 40, y: 40};
+                    arm.x = startArm.x + (endArm.x - startArm.x) * Math.sin(progress * Math.PI);
+                    arm.y = startArm.y + (endArm.y - startArm.y) * Math.sin(progress * Math.PI);
+                    break;
+                case 'abducao':
+                    endLeg = {x: 60, y: 70};
+                    leg.x = startLeg.x + (endLeg.x - startLeg.x) * Math.sin(progress * Math.PI);
+                    leg.y = startLeg.y + (endLeg.y - startLeg.y) * Math.sin(progress * Math.PI);
+                    break;
+                case 'aducao':
+                    endLeg = {x: 10, y: 80};
+                    leg.x = startLeg.x + (endLeg.x - startLeg.x) * Math.sin(progress * Math.PI);
+                    leg.y = startLeg.y + (endLeg.y - startLeg.y) * Math.sin(progress * Math.PI);
+                    break;
                 case 'rot_int':
                 case 'rot_ext':
                     drawPerson(arm, leg);
+                     const direction = (type === 'rot_int') ? 1 : -1;
+                     const arrowProgress = progress * 2;
+                     const arcAngle = arrowProgress * Math.PI;
+                     const arcRadius = 25;
+                     const arrowX = cx + 30;
+                     const arrowY = cy + 90;
+
                      ctx.lineWidth = 2;
                      ctx.strokeStyle = 'var(--accent-color)';
                      ctx.beginPath();
-                     const arrowY = cy + 90;
-                     if(type === 'rot_int') {
-                        ctx.arc(cx + 30, arrowY, 15, Math.PI * 1.2, Math.PI * 1.8);
-                        ctx.moveTo(cx + 30 + Math.cos(Math.PI * 1.8)*15, arrowY + Math.sin(Math.PI * 1.8)*15);
-                        ctx.lineTo(cx + 30 + Math.cos(Math.PI * 1.8)*15 - 5, arrowY + Math.sin(Math.PI * 1.8)*15 - 5);
-                     } else {
-                        ctx.arc(cx + 30, arrowY, 15, Math.PI * 0.2, Math.PI * 0.8);
-                        ctx.moveTo(cx + 30 + Math.cos(Math.PI * 0.2)*15, arrowY + Math.sin(Math.PI * 0.2)*15);
-                        ctx.lineTo(cx + 30 + Math.cos(Math.PI * 0.2)*15 + 5, arrowY + Math.sin(Math.PI * 0.2)*15 - 5);
-                     }
+                     ctx.arc(arrowX, arrowY, arcRadius, 0.2 * Math.PI, 0.2 * Math.PI + arcAngle * direction, type === 'rot_int');
                      ctx.stroke();
                     return;
             }
@@ -867,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const man = this.state.activeManeuver;
             if (!man) return;
             
-            man.animationState = (man.animationState + 0.02) % 2;
+            man.animationState = (man.animationState + 0.01) % 2;
             this.drawManeuver(man);
             
             this.state.animationFrameId = requestAnimationFrame(this.animateManeuver.bind(this));
@@ -878,7 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             
-            const progress = Math.abs(man.animationState - 1); // Goes 1 -> 0 -> 1
+            const progress = Math.abs(man.animationState - 1); 
 
             function drawStickman(x, y, scale, parts) {
                 ctx.save();
@@ -889,8 +1039,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 ctx.beginPath();
                 ctx.arc(0, -70, 15, 0, Math.PI * 2);
-                ctx.moveTo(0, -55); ctx.lineTo(0, 0); // Torso
-                ctx.moveTo(0, 0); ctx.lineTo(-20, 50); ctx.lineTo(-25, 100); // Left Leg
+                ctx.moveTo(0, -55); ctx.lineTo(0, 0); 
+                ctx.moveTo(0, 0); ctx.lineTo(-20, 50); ctx.lineTo(-25, 100); 
                 
                 ctx.moveTo(0, 0); 
                 ctx.lineTo(parts.right_thigh.x, parts.right_thigh.y);
@@ -906,8 +1056,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ctx.restore();
             }
 
-            function drawArrow(x1, y1, x2, y2, color = 'red') {
-                 const headlen = 10;
+            function drawArrow(x1, y1, x2, y2, color = 'red', headlen = 10) {
                  const dx = x2 - x1;
                  const dy = y2 - y1;
                  const angle = Math.atan2(dy, dx);
@@ -934,9 +1083,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             switch(man.name) {
                 case 'Neer':
-                    parts.right_arm = {x: 20 - progress * 10, y: -10 - progress * 70};
-                    parts.right_forearm = {x: 30 - progress * 10, y: 20 - progress * 70};
-                    drawArrow(px + 40, py - 40, px + 10, py - 120);
+                    parts.right_arm = {x: 20 - progress * 20, y: -10 - progress * 100};
+                    parts.right_forearm = {x: 30 - progress * 20, y: 20 - progress * 100};
+                    drawArrow(px + 40, py - 40, px + 40 - progress*10, py - 40 - progress*30);
                     break;
                 case 'Hawkins-Kennedy':
                      parts.right_arm = { x: 0, y: -40 };
@@ -945,15 +1094,14 @@ document.addEventListener('DOMContentLoaded', () => {
                      ctx.translate(px, py - 110);
                      ctx.rotate(progress * -0.5);
                      ctx.beginPath(); ctx.lineWidth=6; ctx.strokeStyle = '#5A5A5A';
-                     ctx.moveTo(0,0); ctx.lineTo(50,0); ctx.stroke();
-                     ctx.restore();
-                     drawArrow(px + 60, py-110, px + 50, py-90);
+                     ctx.moveTo(0,0); ctx.lineTo(50,0); ctx.stroke(); ctx.restore();
+                     drawArrow(px + 60, py-110, px + 60 - progress*10, py-110);
                      parts.right_arm = {x:0, y: -40}; parts.right_forearm = {x:0, y:-40};
                     break;
                 case 'Jobe (Lata Vazia)':
                     parts.right_arm = { x: 40, y: -20 };
                     parts.right_forearm = { x: 50, y: 10 };
-                    drawArrow(px + 55, py - 80, px + 55, py - 50);
+                    drawArrow(px + 55, py - 80, px + 55, py - 80 + progress * 20);
                     break;
                 case 'Gaveta Anterior':
                 case 'Gaveta Posterior':
@@ -962,12 +1110,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     const direction = (man.name === 'Gaveta Anterior') ? 1 : -1;
                     const shift = progress * 10 * direction;
                     parts.right_calf.x += shift;
-                    drawArrow(px + 10 + shift, py, px + 10 + 20*direction + shift, py);
+                    drawArrow(px + 10, py, px + 10 + 20*direction, py);
                     break;
                 case 'Lachman':
                     parts.right_thigh = {x: 25, y: 20};
                     parts.right_calf = {x: 45 + progress * 10, y: 45};
-                    drawArrow(px + 50, py + 30, px + 70, py + 30);
+                    drawArrow(px + 50, py + 30, px + 50 + progress*20, py + 30);
                     break;
                 case 'Stress em Valgo':
                     parts.right_calf = {x: 25 + progress * 20, y: 100};
@@ -980,36 +1128,51 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'Thomas':
                     parts.right_thigh = {x: 0, y: -40};
                     parts.right_calf = {x: -30, y: -30};
-                    parts.left_leg_y_offset = progress * 20;
+                    const yOffset = progress * 20;
                     ctx.save();
                     ctx.translate(px, py);
                     ctx.scale(scale, scale);
                     ctx.lineWidth = 6; ctx.strokeStyle = '#5A5A5A';
                     ctx.beginPath();
                     ctx.arc(0, -70, 15, 0, Math.PI * 2);
-                    ctx.moveTo(0, -55); ctx.lineTo(0, 0); // Torso
-                    ctx.moveTo(0, 0); ctx.lineTo(-20, 50 - parts.left_leg_y_offset); ctx.lineTo(-25, 100 - parts.left_leg_y_offset); // Left Leg
-                    ctx.moveTo(0, 0); ctx.lineTo(0, -40); ctx.lineTo(-30, -30); // Right Leg
-                    ctx.moveTo(0, -40); ctx.lineTo(30,-10); // Right Arm
+                    ctx.moveTo(0, -55); ctx.lineTo(0, 0); 
+                    ctx.moveTo(0, 0); ctx.lineTo(-20, 50 - yOffset); ctx.lineTo(-25, 100 - yOffset); 
+                    ctx.moveTo(0, 0); ctx.lineTo(0, -40); ctx.lineTo(-30, -30); 
+                    ctx.moveTo(0, -40); ctx.lineTo(30,-10); 
                     ctx.stroke();
                     ctx.restore();
                     return;
                 case 'Patrick (FABER)':
                     parts.right_thigh = {x: -20, y: 50};
                     parts.right_calf = {x: 20, y: 50};
-                    drawArrow(px, py, px, py+20);
+                    drawArrow(px, py, px, py + progress * 20);
                     break;
                 case 'Phalen':
-                    parts.right_arm = {x:0, y: 0};
-                    parts.right_forearm = {x: 0, y:30};
-                    parts.left_arm = {x:0, y:0};
-                    // Left forearm
-                    ctx.save(); ctx.translate(px-30*scale,py-10*scale); ctx.scale(scale,scale);
-                    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,30); ctx.stroke(); ctx.restore();
-                    break;
+                    parts.right_arm = {x:30, y: -10}; parts.right_forearm = {x: 50, y: 20};
+                    parts.left_arm = {x:-30, y:-10}; parts.left_forearm = {x:-50, y:20};
+                    const flex = progress * 20;
+                    ctx.save();
+                    ctx.translate(px, py-20);
+                    ctx.scale(scale, scale);
+                    ctx.lineWidth = 6;
+                    ctx.strokeStyle = '#5A5A5A';
+                    ctx.beginPath();
+                    ctx.arc(0, -70, 15, 0, Math.PI * 2);
+                    ctx.moveTo(0, -55); ctx.lineTo(0, 0); 
+                    ctx.moveTo(0, -40); ctx.lineTo(-30 - flex, -10 + flex);
+                    ctx.moveTo(0, -40); ctx.lineTo(30 + flex, -10 + flex);
+                    ctx.stroke();
+                    ctx.restore();
+                    return;
                 case 'Tinel':
                     drawArrow(px+20, py+30, px, py+30, 'blue');
-                    break;
+                    const tapX = px + 15 + Math.cos(man.animationState * Math.PI * 8) * 5;
+                    const tapY = py + 30 + Math.sin(man.animationState * Math.PI * 8) * 5;
+                    ctx.fillStyle = '#6B8EAD';
+                    ctx.beginPath();
+                    ctx.arc(tapX, tapY, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    return;
             }
             
             drawStickman(px, py, scale, parts);
