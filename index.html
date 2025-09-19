@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia Interativo de Ortopedia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Warm Neutrals (Beige, Off-white, Dark Gray, Muted Blue Accent) -->
+    <!-- Application Structure Plan: A thematic, single-page application with a fixed sidebar for navigation between four core modules: 'Fundamentos' (Anatomy/Physiology), 'Avaliação Ortopédica' (Clinical Exam/Terminology), 'Lesões Comuns' (Fracture Types), and 'Manobras' (Special Tests). This structure groups foundational knowledge separately from clinical application, facilitating focused learning. Interactivity is central, with clickable canvas diagrams for anatomy and animated stick-figure demonstrations for maneuvers. This design avoids a linear report-like structure in favor of an exploratory, tool-based approach, which is more effective for pre-rotation review and quick reference. -->
+    <!-- Visualization & Content Choices:
+        - Report Info: Macro/Micro bone anatomy. Goal: Inform/Organize. Viz: Interactive Canvas diagrams. Interaction: Click on anatomical parts to reveal text descriptions. Justification: Visual learning is key for anatomy; interaction promotes active engagement over passive reading. Method: HTML5 Canvas API with JS event listeners.
+        - Report Info: Fracture healing stages. Goal: Show Change/Process. Viz: Clickable timeline with corresponding Canvas illustrations. Interaction: User clicks a stage to see its visual representation and description. Justification: Breaks down a complex process into manageable, visual steps. Method: HTML/CSS for timeline, Canvas for visuals.
+        - Report Info: Orthopedic maneuvers. Goal: Demonstrate/Instruct. Viz: Animated stick-figure diagrams on Canvas. Interaction: User selects a maneuver from a list, triggering a text description and a corresponding animation showing patient/examiner positioning and forces. Justification: Static images can be ambiguous; animation clearly demonstrates the dynamic nature of these tests. Method: HTML5 Canvas with requestAnimationFrame.
+        - Report Info: Terminology (deformities, movements). Goal: Define/Inform. Viz: Simple Canvas drawings of stick figures. Interaction: Select term to see illustration. Justification: Provides immediate visual context for abstract terms like 'valgo' or 'varus'. Method: HTML5 Canvas.
+        - CONFIRMING NO SVG/Mermaid. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        :root {
+            --bg-main: #FAF9F6;
+            --bg-sidebar: #F0EBE3;
+            --text-primary: #333333;
+            --text-secondary: #5A5A5A;
+            --accent-color: #6B8EAD;
+            --border-color: #DCDCDC;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+        }
+        .sidebar {
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+        }
+        .nav-link {
+            transition: all 0.2s ease-in-out;
+            border-left: 4px solid transparent;
+        }
+        .nav-link:hover {
+            background-color: rgba(0,0,0,0.05);
+            border-left-color: var(--accent-color);
+        }
+        .nav-link.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-left-color: var(--accent-color);
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .interactive-canvas {
+            border: 1px solid var(--border-color);
+            background-color: #ffffff;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .tab-button {
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+        .tab-button.active {
+            color: var(--accent-color);
+            border-bottom-color: var(--accent-color);
+        }
+        .maneuver-item {
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .maneuver-item:hover, .maneuver-item.active {
+            background-color: var(--accent-color);
+            color: white;
+        }
+    </style>
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+</head>
+<body class="antialiased">
+
+    <div class="flex h-screen bg-gray-100">
+        <aside class="w-64 sidebar flex-shrink-0 p-4 hidden md:block">
+            <h1 class="text-2xl font-bold text-center text-[var(--accent-color)] mb-8">Orto-Guia</h1>
+            <nav id="main-nav">
+                <a href="#fundamentos" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Fundamentos</a>
+                <a href="#avaliacao" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Avaliação Ortopédica</a>
+                <a href="#lesoes" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Lesões e Fraturas</a>
+                <a href="#manobras" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Manobras Especiais</a>
+            </nav>
+        </aside>
+
+        <button id="mobile-menu-btn" class="md:hidden fixed top-4 left-4 z-20 bg-[var(--accent-color)] text-white p-2 rounded-md">
+            ☰ Menu
+        </button>
+
+        <div id="mobile-menu" class="hidden fixed inset-0 bg-black bg-opacity-50 z-30">
+            <div class="sidebar w-64 h-full p-4">
+                <button id="close-mobile-menu" class="absolute top-4 right-4 text-white text-2xl">&times;</button>
+                <h1 class="text-2xl font-bold text-center text-[var(--accent-color)] mb-8">Orto-Guia</h1>
+                <nav id="mobile-nav">
+                    <a href="#fundamentos" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Fundamentos</a>
+                    <a href="#avaliacao" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Avaliação Ortopédica</a>
+                    <a href="#lesoes" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Lesões e Fraturas</a>
+                    <a href="#manobras" class="nav-link block p-3 rounded-lg mb-2 font-semibold">Manobras Especiais</a>
+                </nav>
+            </div>
+        </div>
+
+        <main class="flex-1 p-6 lg:p-10 overflow-y-auto">
+
+            <section id="fundamentos" class="content-section">
+                <h2 class="text-3xl font-bold mb-2">Fundamentos da Ortopedia</h2>
+                <p class="text-lg text-gray-600 mb-8">Esta seção aborda a base do sistema musculoesquelético. Explore a anatomia macro e microscópica do osso, entenda os processos fisiológicos de remodelação e consolidação, e revise os tecidos moles associados.</p>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold mb-4">Anatomia Macroscópica de um Osso Longo</h3>
+                        <canvas id="macro-anatomy-canvas" class="w-full interactive-canvas" width="500" height="300"></canvas>
+                        <p id="macro-anatomy-text" class="mt-4 text-gray-700 h-24">Clique em uma região do osso para ver a descrição.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold mb-4">Anatomia Microscópica (Sistema de Havers)</h3>
+                        <canvas id="micro-anatomy-canvas" class="w-full interactive-canvas" width="500" height="300"></canvas>
+                        <p id="micro-anatomy-text" class="mt-4 text-gray-700 h-24">Clique em um componente para ver a descrição.</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-xl font-bold mb-4">Fisiologia: Consolidação de Fraturas</h3>
+                    <div id="fracture-healing-tabs" class="flex border-b mb-4">
+                        <button data-stage="1" class="tab-button p-4 font-semibold active">Fase Inflamatória</button>
+                        <button data-stage="2" class="tab-button p-4 font-semibold">Calo Mole</button>
+                        <button data-stage="3" class="tab-button p-4 font-semibold">Calo Duro</button>
+                        <button data-stage="4" class="tab-button p-4 font-semibold">Remodelação</button>
+                    </div>
+                    <div class="flex flex-col md:flex-row gap-6 items-center">
+                        <canvas id="fracture-healing-canvas" class="interactive-canvas w-full md:w-1/3" width="300" height="300"></canvas>
+                        <p id="fracture-healing-text" class="md:w-2/3 text-gray-700"></p>
+                    </div>
+                </div>
+            </section>
+            
+            <section id="avaliacao" class="content-section">
+                <h2 class="text-3xl font-bold mb-2">Avaliação Ortopédica</h2>
+                <p class="text-lg text-gray-600 mb-8">A avaliação ortopédica é um processo sistemático. Aqui, você revisará os componentes do exame físico e aprenderá a terminologia essencial para descrever movimentos, deformidades e tipos de lesões.</p>
+                
+                <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+                    <h3 class="text-xl font-bold mb-4">Terminologia de Lesões</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="injury-terms"></div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold mb-4">Terminologia de Movimento</h3>
+                        <div id="movement-terms-controls" class="flex flex-wrap gap-2 mb-4"></div>
+                        <canvas id="movement-canvas" class="w-full interactive-canvas" width="400" height="300"></canvas>
+                        <p id="movement-term-description" class="text-center font-semibold mt-2 text-lg text-[var(--accent-color)]"></p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold mb-4">Terminologia de Deformidades</h3>
+                        <div id="deformity-terms-controls" class="flex flex-wrap gap-2 mb-4"></div>
+                        <canvas id="deformity-canvas" class="w-full interactive-canvas" width="400" height="300"></canvas>
+                        <p id="deformity-term-description" class="text-center font-semibold mt-2 text-lg text-[var(--accent-color)]"></p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="lesoes" class="content-section">
+                <h2 class="text-3xl font-bold mb-2">Lesões e Classificação de Fraturas</h2>
+                <p class="text-lg text-gray-600 mb-8">Compreender como classificar fraturas é fundamental para o diagnóstico e planejamento terapêutico. Esta seção detalha a classificação das fraturas com base no traço, desvio e exposição.</p>
+                <div class="bg-white p-6 rounded-xl shadow-md">
+                    <h3 class="text-xl font-bold mb-4">Classificação de Fraturas</h3>
+                    <div id="fracture-type-controls" class="flex flex-wrap gap-3 mb-6"></div>
+                     <div class="flex flex-col md:flex-row gap-6 items-center">
+                        <canvas id="fracture-type-canvas" class="interactive-canvas w-full md:w-1/3" width="300" height="400"></canvas>
+                        <div class="md:w-2/3">
+                            <h4 id="fracture-type-title" class="text-2xl font-bold text-[var(--accent-color)] mb-2"></h4>
+                            <p id="fracture-type-text" class="text-gray-700"></p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="manobras" class="content-section">
+                <h2 class="text-3xl font-bold mb-2">Manobras Especiais</h2>
+                <p class="text-lg text-gray-600 mb-8">Os testes especiais são cruciais para diagnosticar lesões ligamentares, tendíneas e articulares. Navegue pelas articulações para selecionar uma manobra. A animação demonstrará a execução correta, juntamente com o objetivo e o que indica um resultado positivo.</p>
+                
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <div class="lg:w-1/3 bg-white p-4 rounded-xl shadow-md">
+                        <h3 class="text-xl font-bold mb-4">Selecione a Articulação</h3>
+                        <select id="joint-select" class="w-full p-2 border rounded-md mb-4 bg-gray-50">
+                            <option value="ombro">Ombro</option>
+                            <option value="joelho">Joelho</option>
+                            <option value="quadril">Quadril</option>
+                            <option value="punho">Punho e Mão</option>
+                        </select>
+                        <div id="maneuver-list" class="space-y-1 max-h-96 overflow-y-auto"></div>
+                    </div>
+                    <div class="lg:w-2/3 bg-white p-6 rounded-xl shadow-md">
+                        <div id="maneuver-details" class="flex flex-col md:flex-row gap-6">
+                           <div class="md:w-1/2">
+                               <h3 id="maneuver-name" class="text-2xl font-bold text-[var(--accent-color)] mb-3">Selecione uma manobra</h3>
+                               <p class="mb-2"><strong class="text-gray-800">Objetivo:</strong> <span id="maneuver-objective"></span></p>
+                               <p class="mb-2"><strong class="text-gray-800">Execução:</strong> <span id="maneuver-execution"></span></p>
+                               <p><strong class="text-gray-800">Resultado Positivo:</strong> <span id="maneuver-positive"></span></p>
+                           </div>
+                           <div class="md:w-1/2">
+                               <canvas id="maneuver-canvas" class="w-full interactive-canvas" width="400" height="350"></canvas>
+                           </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    const app = {
+        state: {
+            activeSection: 'fundamentos',
+            activeManeuver: null,
+            animationFrameId: null,
+        },
+        
+        elements: {
+            navLinks: document.querySelectorAll('.nav-link'),
+            mobileNavLinks: document.querySelectorAll('#mobile-nav .nav-link'),
+            sections: document.querySelectorAll('.content-section'),
+            mobileMenuBtn: document.getElementById('mobile-menu-btn'),
+            mobileMenu: document.getElementById('mobile-menu'),
+            closeMobileMenu: document.getElementById('close-mobile-menu'),
+        },
+
+        data: {
+            macroAnatomy: [
+                { name: 'Epífise', x: 250, y: 45, w: 180, h: 70, text: 'Extremidades do osso longo, cobertas por cartilagem articular. Contém osso esponjoso e medula óssea vermelha.' },
+                { name: 'Diáfise', x: 250, y: 150, w: 60, h: 140, text: 'O corpo principal ou haste do osso. É composta de osso compacto e contém a cavidade medular com medula óssea amarela em adultos.' },
+                { name: 'Metáfise', x: 250, y: 100, w: 100, h: 40, text: 'Região entre a diáfise e a epífise. Em ossos em crescimento, contém a placa epifisária (cartilagem de crescimento).' },
+                 { name: 'Metáfise', x: 250, y: 200, w: 100, h: 40, text: 'Região entre a diáfise e a epífise. Em ossos em crescimento, contém a placa epifisária (cartilagem de crescimento).' },
+                { name: 'Cartilagem Articular', x: 250, y: 20, w: 160, h: 20, text: 'Camada fina de cartilagem hialina que cobre a epífise onde o osso forma uma articulação, reduzindo o atrito.' },
+                { name: 'Periósteo', x: 190, y: 150, w: 20, h: 140, text: 'Membrana fibrosa resistente que recobre a superfície externa do osso. Essencial para o crescimento em espessura, reparo e nutrição.' }
+            ],
+            microAnatomy: [
+                { name: 'Ósteon', x: 250, y: 150, r1: 120, r2: 140, text: 'A unidade estrutural fundamental do osso compacto, também chamada de Sistema de Havers. Organizado em cilindros concêntricos.'},
+                { name: 'Canal Central (de Havers)', x: 250, y: 150, r: 20, text: 'Canal no centro de cada ósteon contendo vasos sanguíneos e nervos para nutrir o osso.' },
+                { name: 'Lamelas', x: 250, y: 150, r1: 60, r2: 80, text: 'Anéis concêntricos de matriz óssea calcificada que compõem o ósteon.' },
+                { name: 'Lacunas com Osteócitos', x: 330, y: 150, r: 8, text: 'Pequenos espaços entre as lamelas que contêm as células ósseas maduras, os osteócitos.' },
+                { name: 'Canalículos', x: 300, y: 150, text: 'Pequenos canais que irradiam das lacunas, conectando-as entre si e ao canal central, permitindo a passagem de nutrientes.' }
+            ],
+            fractureHealing: {
+                1: { title: 'Fase Inflamatória (Horas a dias)', text: 'Formação de um hematoma no local da fratura. Células inflamatórias chegam para limpar o tecido necrótico, liberando citocinas que iniciam o processo de cura.' },
+                2: { title: 'Formação do Calo Mole (Dias a semanas)', text: 'Células progenitoras formam um calo fibrocartilaginoso que une os fragmentos da fratura. Este calo não fornece estabilidade estrutural, mas reduz a mobilidade.' },
+                3: { title: 'Formação do Calo Duro (Semanas a meses)', text: 'O calo mole é gradualmente substituído por osso lamelar através da ossificação endocondral e intramembranosa, formando um calo ósseo que estabiliza a fratura.' },
+                4: { title: 'Remodelação Óssea (Meses a anos)', text: 'O osso imaturo é lentamente substituído por osso lamelar maduro e organizado, restaurando a forma e a força originais do osso, de acordo com as leis de Wolff.' }
+            },
+            injuryTerms: [
+                { name: 'Fratura', text: 'Solução de continuidade óssea, ou seja, a quebra de um osso.' },
+                { name: 'Luxação', text: 'Perda completa e permanente do contato entre as superfícies articulares de uma articulação.' },
+                { name: 'Subluxação', text: 'Perda parcial do contato entre as superfícies articulares.' },
+                { name: 'Entorse', text: 'Lesão dos ligamentos de uma articulação, sem deslocamento das superfícies articulares.' },
+                { name: 'Estiramento', text: 'Lesão de um músculo ou tendão devido ao alongamento excessivo.' },
+                { name: 'Contusão', text: 'Lesão causada por um trauma direto, sem quebra da pele, resultando em hematoma e edema.' },
+                { name: 'Avulsão', text: 'Arrancamento de um fragmento ósseo por uma contração muscular ou tração ligamentar súbita.' },
+                { name: 'Tendinite', text: 'Inflamação de um tendão.' },
+            ],
+            movementTerms: {
+                flexao: { name: 'Flexão', description: 'Diminui o ângulo entre dois segmentos corporais.' },
+                extensao: { name: 'Extensão', description: 'Aumenta o ângulo entre dois segmentos corporais.' },
+                abducao: { name: 'Abdução', description: 'Afasta um membro da linha média do corpo.' },
+                aducao: { name: 'Adução', description: 'Aproxima um membro da linha média do corpo.' },
+                rot_int: { name: 'Rotação Interna', description: 'Gira a face anterior de um membro em direção à linha média.' },
+                rot_ext: { name: 'Rotação Externa', description: 'Gira a face anterior de um membro para longe da linha média.' }
+            },
+            deformityTerms: {
+                valgo: { name: 'Valgo', description: 'Desvio de um segmento distal para longe da linha média do corpo.' },
+                varo: { name: 'Varo', description: 'Desvio de um segmento distal em direção à linha média do corpo.' },
+                ante: { name: 'Antecurvo', description: 'Curvatura do osso com convexidade para frente.' },
+                recu: { name: 'Recurvo', description: 'Curvatura do osso com convexidade para trás.' }
+            },
+            fractureTypes: [
+                 { id: 'transversa', name: 'Transversa', description: 'O traço da fratura é perpendicular ao eixo longo do osso. Geralmente causada por uma força de angulação.' },
+                 { id: 'obliqua', name: 'Oblíqua', description: 'O traço da fratura corre em um ângulo em relação ao eixo do osso. Comum em traumas de angulação com compressão.' },
+                 { id: 'espiral', name: 'Espiral', description: 'O traço da fratura circunda o osso, semelhante a uma escada em espiral. Típica de lesões rotacionais.' },
+                 { id: 'cominutiva', name: 'Cominutiva', description: 'O osso é quebrado em três ou mais fragmentos. Resulta de traumas de alta energia.' },
+                 { id: 'galho-verde', name: 'Galho Verde', description: 'Fratura incompleta na qual um lado do osso está quebrado e o outro está dobrado. Comum em crianças devido à maior flexibilidade óssea.' }
+            ],
+            maneuvers: {
+                ombro: [
+                    { name: 'Neer', objective: 'Avaliar impacto subacromial.', execution: 'O examinador estabiliza a escápula e eleva passivamente o braço do paciente em flexão máxima.', positive: 'Dor na região anterior ou lateral do ombro.' },
+                    { name: 'Hawkins-Kennedy', objective: 'Avaliar impacto subacromial.', execution: 'O braço e cotovelo do paciente são flexionados a 90°. O examinador realiza uma rotação interna forçada do ombro.', positive: 'Dor na região subacromial.' },
+                    { name: 'Jobe (Lata Vazia)', objective: 'Avaliar o tendão do supraespinhoso.', execution: 'O paciente abduz os braços a 90°, aduz horizontalmente a 30° com os polegares para baixo. O examinador aplica uma força para baixo nos braços.', positive: 'Dor ou fraqueza ao resistir à força.' },
+                ],
+                joelho: [
+                    { name: 'Gaveta Anterior', objective: 'Avaliar o Ligamento Cruzado Anterior (LCA).', execution: 'Paciente em decúbito dorsal com joelho fletido a 90°. O examinador senta-se no pé do paciente e traciona a tíbia anteriormente.', positive: 'Translação anterior excessiva da tíbia.' },
+                    { name: 'Lachman', objective: 'Avaliar o LCA (mais sensível).', execution: 'Joelho fletido a 20-30°. O examinador estabiliza o fêmur e puxa a tíbia anteriormente.', positive: 'Translação anterior da tíbia sem um "end-point" firme.' },
+                    { name: 'Gaveta Posterior', objective: 'Avaliar o Ligamento Cruzado Posterior (LCP).', execution: 'Posição similar à gaveta anterior, mas o examinador empurra a tíbia posteriormente.', positive: 'Translação posterior excessiva da tíbia.' },
+                    { name: 'Stress em Valgo', objective: 'Avaliar o Ligamento Colateral Medial (LCM).', execution: 'Examinador aplica uma força em valgo (para dentro) no joelho a 0° e 30° de flexão.', positive: 'Abertura da interlinha medial ou dor.' },
+                    { name: 'Stress em Varo', objective: 'Avaliar o Ligamento Colateral Lateral (LCL).', execution: 'Examinador aplica uma força em varo (para fora) no joelho a 0° e 30° de flexão.', positive: 'Abertura da interlinha lateral ou dor.' },
+                ],
+                quadril: [
+                    { name: 'Thomas', objective: 'Avaliar contratura em flexão do quadril.', execution: 'Paciente em decúbito dorsal. O examinador flexiona passivamente um quadril até o joelho tocar o peito. A outra perna deve permanecer estendida na mesa.', positive: 'A perna contralateral se eleva da mesa, indicando contratura do iliopsoas.' },
+                    { name: 'Patrick (FABER)', objective: 'Detectar patologia no quadril ou sacroilíaca.', execution: 'Paciente em decúbito dorsal. O pé do lado a ser testado é colocado sobre o joelho oposto (posição de Flexão, ABdução e Rotação Externa). O examinador pressiona suavemente o joelho fletido para baixo.', positive: 'Dor na região do quadril ou sacroilíaca.' },
+                ],
+                punho: [
+                    { name: 'Phalen', objective: 'Testar a Síndrome do Túnel do Carpo (compressão do nervo mediano).', execution: 'O paciente é solicitado a manter os punhos em flexão máxima por 60 segundos.', positive: 'Parestesia (formigamento) ou dor na distribuição do nervo mediano (polegar, indicador, médio).' },
+                    { name: 'Tinel', objective: 'Detectar irritação de um nervo superficial (mediano no túnel do carpo).', execution: 'O examinador percute suavemente sobre o túnel do carpo.', positive: 'Sensação de choque ou formigamento irradiando para os dedos.' },
+                ]
+            }
+        },
+
+        init() {
+            this.setupEventListeners();
+            this.navigateTo('fundamentos');
+            this.drawAll();
+            this.setupInjuryTerms();
+            this.setupMovementTerms();
+            this.setupDeformityTerms();
+            this.setupFractureTypes();
+            this.setupManeuvers();
+        },
+        
+        setupEventListeners() {
+            this.elements.navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.navigateTo(link.hash.substring(1));
+                });
+            });
+            this.elements.mobileNavLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.navigateTo(link.hash.substring(1));
+                    this.toggleMobileMenu(false);
+                });
+            });
+            this.elements.mobileMenuBtn.addEventListener('click', () => this.toggleMobileMenu(true));
+            this.elements.closeMobileMenu.addEventListener('click', () => this.toggleMobileMenu(false));
+            this.elements.mobileMenu.addEventListener('click', (e) => {
+                if(e.target === this.elements.mobileMenu) this.toggleMobileMenu(false);
+            });
+
+            document.getElementById('macro-anatomy-canvas').addEventListener('click', this.handleMacroAnatomyClick.bind(this));
+            document.getElementById('micro-anatomy-canvas').addEventListener('click', this.handleMicroAnatomyClick.bind(this));
+            document.getElementById('fracture-healing-tabs').addEventListener('click', this.handleFractureHealingTabClick.bind(this));
+        },
+        
+        toggleMobileMenu(show) {
+            this.elements.mobileMenu.classList.toggle('hidden', !show);
+        },
+
+        navigateTo(sectionId) {
+            this.state.activeSection = sectionId;
+            this.elements.sections.forEach(sec => sec.classList.toggle('active', sec.id === sectionId));
+            this.elements.navLinks.forEach(link => link.classList.toggle('active', link.hash.substring(1) === sectionId));
+             this.elements.mobileNavLinks.forEach(link => link.classList.toggle('active', link.hash.substring(1) === sectionId));
+
+            if (sectionId === 'fundamentos') {
+                this.drawMacroAnatomy();
+                this.drawMicroAnatomy();
+                this.updateFractureHealing(1);
+            } else if (sectionId === 'avaliacao') {
+                this.drawMovement('flexao');
+                this.drawDeformity('valgo');
+            } else if (sectionId === 'lesoes') {
+                this.updateFractureType(this.data.fractureTypes[0].id);
+            } else if (sectionId === 'manobras') {
+                document.getElementById('joint-select').dispatchEvent(new Event('change'));
+            }
+        },
+
+        drawAll() {
+             this.drawMacroAnatomy();
+             this.drawMicroAnatomy();
+             this.updateFractureHealing(1);
+             this.drawMovement('flexao');
+             this.drawDeformity('valgo');
+             this.updateFractureType(this.data.fractureTypes[0].id);
+        },
+        
+        handleMacroAnatomyClick(e) {
+            const canvas = e.target;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            let found = false;
+            this.data.macroAnatomy.forEach(part => {
+                if (x > part.x - part.w / 2 && x < part.x + part.w / 2 && y > part.y - part.h / 2 && y < part.y + part.h / 2) {
+                    document.getElementById('macro-anatomy-text').textContent = `${part.name}: ${part.text}`;
+                    this.drawMacroAnatomy(part.name);
+                    found = true;
+                }
+            });
+            if(!found) {
+                 document.getElementById('macro-anatomy-text').textContent = 'Clique em uma região do osso para ver a descrição.';
+                 this.drawMacroAnatomy();
+            }
+        },
+        
+        handleMicroAnatomyClick(e) {
+            const canvas = e.target;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+            let found = false;
+            this.data.microAnatomy.forEach(part => {
+                const dist = Math.sqrt((x - part.x) ** 2 + (y - part.y) ** 2);
+                if (part.r && dist <= part.r || (part.r1 && dist >= part.r1 && dist <= part.r2)) {
+                    document.getElementById('micro-anatomy-text').textContent = `${part.name}: ${part.text}`;
+                    this.drawMicroAnatomy(part.name);
+                    found = true;
+                } else if(part.name === 'Canalículos' && dist < 120 && dist > 20) {
+                     document.getElementById('micro-anatomy-text').textContent = `${part.name}: ${part.text}`;
+                     this.drawMicroAnatomy(part.name);
+                     found = true;
+                }
+            });
+             if(!found) {
+                 document.getElementById('micro-anatomy-text').textContent = 'Clique em um componente para ver a descrição.';
+                 this.drawMicroAnatomy();
+            }
+        },
+        
+        handleFractureHealingTabClick(e) {
+            if (e.target.tagName === 'BUTTON') {
+                const stage = e.target.dataset.stage;
+                this.updateFractureHealing(stage);
+            }
+        },
+
+        drawMacroAnatomy(highlight) {
+            const canvas = document.getElementById('macro-anatomy-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const boneColor = '#f0e6d6';
+            const cartilageColor = '#e0e8f0';
+            const highlightColor = 'rgba(107, 142, 173, 0.5)';
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+
+            ctx.fillStyle = cartilageColor;
+            ctx.beginPath();
+            ctx.ellipse(0, -110, 80, 20, 0, 0, 2 * Math.PI);
+            ctx.fill();
+
+            if (highlight === 'Cartilagem Articular') {
+                ctx.fillStyle = highlightColor;
+                ctx.fill();
+            }
+
+            ctx.fillStyle = boneColor;
+            ctx.beginPath();
+            ctx.moveTo(-80, -110);
+            ctx.bezierCurveTo(-90, -80, -90, -50, -50, -30);
+            ctx.lineTo(-30, 40);
+            ctx.lineTo(-50, 80);
+            ctx.bezierCurveTo(-90, 100, -90, 130, -80, 150);
+            ctx.lineTo(80, 150);
+            ctx.bezierCurveTo(90, 130, 90, 100, 50, 80);
+            ctx.lineTo(30, 40);
+            ctx.lineTo(50, -30);
+            ctx.bezierCurveTo(90, -50, 90, -80, 80, -110);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+            this.data.macroAnatomy.forEach(part => {
+                if (part.name === highlight) {
+                    ctx.fillStyle = highlightColor;
+                    ctx.fillRect(part.x - part.w / 2, part.y - part.h / 2, part.w, part.h);
+                }
+            });
+        },
+
+        drawMicroAnatomy(highlight) {
+            const canvas = document.getElementById('micro-anatomy-canvas');
+            const ctx = canvas.getContext('2d');
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const highlightColor = 'rgba(107, 142, 173, 0.5)';
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#fdf8f0';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if(highlight === 'Ósteon') {
+                ctx.fillStyle = highlightColor;
+                ctx.beginPath();
+                ctx.arc(cx, cy, 140, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            for (let i = 120; i > 20; i -= 20) {
+                ctx.strokeStyle = '#d3c0a3';
+                ctx.lineWidth = (highlight === 'Lamelas' && i === 60) ? 20 : 1;
+                ctx.strokeStyle = (highlight === 'Lamelas' && i === 60) ? 'rgba(107, 142, 173, 0.8)' : '#d3c0a3';
+                ctx.beginPath();
+                ctx.arc(cx, cy, i, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            
+            if(highlight === 'Canalículos') {
+                ctx.strokeStyle = highlightColor;
+                ctx.lineWidth = 2;
+            } else {
+                ctx.strokeStyle = '#d3c0a3';
+                ctx.lineWidth = 0.5;
+            }
+            
+            for(let r = 40; r < 120; r+=20) {
+                for(let a=0; a < Math.PI * 2; a += Math.PI / 8) {
+                     ctx.beginPath();
+                     ctx.moveTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+                     ctx.lineTo(cx + Math.cos(a) * (r+15), cy + Math.sin(a) * (r+15));
+                     ctx.stroke();
+                }
+            }
+
+
+            for(let r = 30; r < 120; r+=20) {
+                for(let a=0; a < Math.PI * 2; a += Math.PI / 4) {
+                    const osx = cx + Math.cos(a) * r;
+                    const osy = cy + Math.sin(a) * r;
+                    ctx.fillStyle = '#a1887f';
+                    ctx.beginPath();
+                    ctx.arc(osx, osy, 4, 0, Math.PI * 2);
+                    ctx.fill();
+                     if (highlight === 'Lacunas com Osteócitos' && r === 110 && a === Math.PI) {
+                        ctx.fillStyle = highlightColor;
+                        ctx.beginPath();
+                        ctx.arc(osx, osy, 8, 0, Math.PI*2);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            ctx.fillStyle = '#a52a2a';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+            ctx.fill();
+            if(highlight === 'Canal Central (de Havers)') {
+                ctx.fillStyle = highlightColor;
+                ctx.fill();
+            }
+        },
+
+        updateFractureHealing(stage) {
+            const tabs = document.querySelectorAll('#fracture-healing-tabs .tab-button');
+            tabs.forEach(tab => tab.classList.toggle('active', tab.dataset.stage === stage));
+
+            const data = this.data.fractureHealing[stage];
+            document.getElementById('fracture-healing-text').innerHTML = `<strong>${data.title}</strong><br>${data.text}`;
+            this.drawFractureHealing(parseInt(stage));
+        },
+
+        drawFractureHealing(stage) {
+            const canvas = document.getElementById('fracture-healing-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const w = canvas.width;
+            const h = canvas.height;
+
+            const boneY = h / 2;
+            const boneH = 60;
+            const gap = 30;
+            
+            function drawBone(x, width) {
+                ctx.fillStyle = '#f0e6d6';
+                ctx.fillRect(x, boneY - boneH / 2, width, boneH);
+                ctx.strokeStyle = '#d3c0a3';
+                ctx.strokeRect(x, boneY - boneH / 2, width, boneH);
+            }
+            
+            drawBone(20, w / 2 - gap / 2 - 20);
+            drawBone(w / 2 + gap / 2, w / 2 - gap / 2 - 20);
+
+            if (stage === 1) { // Hematoma
+                ctx.fillStyle = 'rgba(139, 0, 0, 0.7)';
+                ctx.beginPath();
+                ctx.ellipse(w / 2, boneY, 40, 50, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (stage === 2) { // Callo mole
+                ctx.fillStyle = 'rgba(173, 216, 230, 0.6)';
+                ctx.beginPath();
+                ctx.ellipse(w / 2, boneY, 50, 60, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (stage === 3) { // Callo duro
+                ctx.fillStyle = 'rgba(210, 180, 140, 0.8)';
+                ctx.beginPath();
+                ctx.ellipse(w / 2, boneY, 45, 55, 0, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (stage === 4) { // Remodelado
+                drawBone(w / 2 - gap / 2, gap);
+            }
+        },
+        
+        setupInjuryTerms() {
+            const container = document.getElementById('injury-terms');
+            this.data.injuryTerms.forEach(term => {
+                const div = document.createElement('div');
+                div.className = "p-4 border rounded-lg bg-gray-50 text-center cursor-pointer hover:bg-[var(--accent-color)] hover:text-white transition";
+                div.textContent = term.name;
+                div.onclick = () => {
+                     const allItems = container.querySelectorAll('div');
+                     allItems.forEach(i => i.classList.remove('bg-[var(--accent-color)]', 'text-white'));
+                     div.classList.add('bg-[var(--accent-color)]', 'text-white');
+                     alert(`${term.name}: ${term.text}`);
+                };
+                container.appendChild(div);
+            });
+        },
+        
+        setupMovementTerms() {
+            const container = document.getElementById('movement-terms-controls');
+            Object.keys(this.data.movementTerms).forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = 'px-3 py-1 border rounded-full text-sm hover:bg-gray-200';
+                btn.textContent = this.data.movementTerms[key].name;
+                btn.onclick = () => this.drawMovement(key);
+                container.appendChild(btn);
+            });
+        },
+        
+        drawMovement(type) {
+            const canvas = document.getElementById('movement-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2 + 30;
+            
+            document.getElementById('movement-term-description').textContent = this.data.movementTerms[type].name;
+
+            function drawPerson(armAngle, legAngle) {
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#5A5A5A';
+                ctx.beginPath();
+                ctx.arc(cx, cy - 80, 20, 0, Math.PI * 2);
+                ctx.moveTo(cx, cy - 60);
+                ctx.lineTo(cx, cy + 20);
+                ctx.moveTo(cx, cy + 20);
+                ctx.lineTo(cx - 30, cy + 80);
+                ctx.moveTo(cx, cy + 20);
+                ctx.lineTo(cx + legAngle.x, cy + legAngle.y);
+                ctx.moveTo(cx, cy - 40);
+                ctx.lineTo(cx - 40, cy);
+                ctx.moveTo(cx, cy - 40);
+                ctx.lineTo(cx + armAngle.x, cy + armAngle.y);
+                ctx.stroke();
+            }
+
+            let arm = {x: 40, y: 0};
+            let leg = {x: 30, y: 80};
+
+            switch(type) {
+                case 'flexao': arm = {x: 0, y: -50}; break;
+                case 'extensao': arm = {x: 30, y: 40}; break;
+                case 'abducao': leg = {x: 60, y: 70}; break;
+                case 'aducao': leg = {x: 10, y: 80}; break;
+                case 'rot_int':
+                case 'rot_ext':
+                    drawPerson(arm, leg);
+                     ctx.lineWidth = 2;
+                     ctx.strokeStyle = 'var(--accent-color)';
+                     ctx.beginPath();
+                     const arrowY = cy + 90;
+                     if(type === 'rot_int') {
+                        ctx.arc(cx + 30, arrowY, 15, Math.PI * 1.2, Math.PI * 1.8);
+                        ctx.moveTo(cx + 30 + Math.cos(Math.PI * 1.8)*15, arrowY + Math.sin(Math.PI * 1.8)*15);
+                        ctx.lineTo(cx + 30 + Math.cos(Math.PI * 1.8)*15 - 5, arrowY + Math.sin(Math.PI * 1.8)*15 - 5);
+                     } else {
+                        ctx.arc(cx + 30, arrowY, 15, Math.PI * 0.2, Math.PI * 0.8);
+                        ctx.moveTo(cx + 30 + Math.cos(Math.PI * 0.2)*15, arrowY + Math.sin(Math.PI * 0.2)*15);
+                        ctx.lineTo(cx + 30 + Math.cos(Math.PI * 0.2)*15 + 5, arrowY + Math.sin(Math.PI * 0.2)*15 - 5);
+                     }
+                     ctx.stroke();
+                    return;
+            }
+             drawPerson(arm, leg);
+        },
+
+        setupDeformityTerms() {
+            const container = document.getElementById('deformity-terms-controls');
+            Object.keys(this.data.deformityTerms).forEach(key => {
+                const btn = document.createElement('button');
+                btn.className = 'px-3 py-1 border rounded-full text-sm hover:bg-gray-200';
+                btn.textContent = this.data.deformityTerms[key].name;
+                btn.onclick = () => this.drawDeformity(key);
+                container.appendChild(btn);
+            });
+        },
+
+        drawDeformity(type) {
+            const canvas = document.getElementById('deformity-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const cx = canvas.width / 2;
+            const cy = 40;
+            
+            document.getElementById('deformity-term-description').textContent = this.data.deformityTerms[type].name;
+            ctx.lineWidth = 6;
+            ctx.strokeStyle = '#5A5A5A';
+
+            ctx.beginPath();
+            let p1 = {x: cx - 40, y: cy};
+            let p2 = {x: cx - 40, y: cy + 80};
+            let p3 = {x: cx - 40, y: cy + 160};
+            let p4 = {x: cx + 40, y: cy + 160};
+            let p5 = {x: cx + 40, y: cy + 80};
+            let p6 = {x: cx + 40, y: cy};
+            
+            switch(type) {
+                case 'valgo': p3 = {x: cx - 60, y: cy + 160}; p4 = {x: cx + 20, y: cy + 160}; break;
+                case 'varo': p3 = {x: cx - 20, y: cy + 160}; p4 = {x: cx + 60, y: cy + 160}; break;
+                case 'ante': p2 = {x: cx - 60, y: cy + 80}; p5 = {x: cx + 20, y: cy + 80}; break;
+                case 'recu': p2 = {x: cx - 20, y: cy + 80}; p5 = {x: cx + 60, y: cy + 80}; break;
+            }
+
+            ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.lineTo(p3.x, p3.y);
+            ctx.moveTo(p6.x, p6.y); ctx.lineTo(p5.x, p5.y); ctx.lineTo(p4.x, p4.y);
+            ctx.stroke();
+
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = 'rgba(128, 128, 128, 0.5)';
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(cx, 0); ctx.lineTo(cx, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        },
+
+        setupFractureTypes() {
+            const container = document.getElementById('fracture-type-controls');
+            this.data.fractureTypes.forEach(frac => {
+                const btn = document.createElement('button');
+                btn.className = 'px-4 py-2 border rounded-lg text-sm hover:bg-gray-200 transition';
+                btn.textContent = frac.name;
+                btn.onclick = () => this.updateFractureType(frac.id);
+                container.appendChild(btn);
+            });
+        },
+
+        updateFractureType(id) {
+            const fracture = this.data.fractureTypes.find(f => f.id === id);
+            if (!fracture) return;
+            
+            document.getElementById('fracture-type-title').textContent = fracture.name;
+            document.getElementById('fracture-type-text').textContent = fracture.description;
+            
+            const allBtns = document.querySelectorAll('#fracture-type-controls button');
+            allBtns.forEach(btn => {
+                btn.classList.toggle('bg-[var(--accent-color)]', btn.textContent === fracture.name);
+                btn.classList.toggle('text-white', btn.textContent === fracture.name);
+            });
+
+            this.drawFractureType(id);
+        },
+        
+        drawFractureType(id) {
+            const canvas = document.getElementById('fracture-type-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const w = canvas.width; const h = canvas.height;
+            const cx = w / 2; const boneW = 80;
+
+            ctx.fillStyle = '#f0e6d6';
+            ctx.fillRect(cx - boneW / 2, 20, boneW, h - 40);
+            ctx.strokeStyle = '#d3c0a3';
+            ctx.strokeRect(cx - boneW / 2, 20, boneW, h - 40);
+            
+            ctx.beginPath();
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            const startX = cx - boneW/2;
+            const endX = cx + boneW/2;
+
+            switch(id) {
+                case 'transversa':
+                    ctx.moveTo(startX, h / 2); ctx.lineTo(endX, h / 2);
+                    break;
+                case 'obliqua':
+                    ctx.moveTo(startX, h/2 - 30); ctx.lineTo(endX, h/2 + 30);
+                    break;
+                case 'espiral':
+                    ctx.moveTo(startX, h/2 - 40); ctx.bezierCurveTo(endX, h/2 - 20, startX, h/2 + 20, endX, h/2 + 40);
+                    break;
+                case 'cominutiva':
+                    ctx.moveTo(startX, h/2 - 20); ctx.lineTo(endX, h/2);
+                    ctx.moveTo(startX, h/2 + 30); ctx.lineTo(cx, h/2 - 10);
+                    ctx.moveTo(cx, h/2 - 10); ctx.lineTo(endX, h/2 + 10);
+                    break;
+                case 'galho-verde':
+                    ctx.moveTo(startX, h/2 - 20); ctx.lineTo(cx - 10, h/2);
+                    ctx.quadraticCurveTo(cx+boneW/2 + 20, h/2, endX, h/2+20);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.strokeStyle = '#d3c0a3';
+                    ctx.lineWidth = 1;
+                    ctx.moveTo(endX, h/2+20);
+                    ctx.quadraticCurveTo(cx+boneW/2 + 20, h/2, endX, h/2-20);
+                    break;
+            }
+            ctx.stroke();
+        },
+        
+        setupManeuvers() {
+            const select = document.getElementById('joint-select');
+            const list = document.getElementById('maneuver-list');
+            
+            select.addEventListener('change', () => {
+                const joint = select.value;
+                list.innerHTML = '';
+                this.data.maneuvers[joint].forEach((man, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'maneuver-item p-3 rounded-md';
+                    item.textContent = man.name;
+                    item.onclick = () => {
+                        this.updateManeuverDetails(joint, index);
+                         list.querySelectorAll('.maneuver-item').forEach(i => i.classList.remove('active'));
+                         item.classList.add('active');
+                    };
+                    list.appendChild(item);
+                });
+                if (list.firstChild) {
+                    list.firstChild.click();
+                } else {
+                    this.clearManeuverDetails();
+                }
+            });
+            select.dispatchEvent(new Event('change'));
+        },
+        
+        clearManeuverDetails() {
+            document.getElementById('maneuver-name').textContent = 'Selecione uma manobra';
+            document.getElementById('maneuver-objective').textContent = '';
+            document.getElementById('maneuver-execution').textContent = '';
+            document.getElementById('maneuver-positive').textContent = '';
+            const canvas = document.getElementById('maneuver-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        },
+
+        updateManeuverDetails(joint, index) {
+            const man = this.data.maneuvers[joint][index];
+            if (!man) return;
+            
+            this.state.activeManeuver = { ...man, animationState: 0 };
+            
+            document.getElementById('maneuver-name').textContent = man.name;
+            document.getElementById('maneuver-objective').textContent = man.objective;
+            document.getElementById('maneuver-execution').textContent = man.execution;
+            document.getElementById('maneuver-positive').textContent = man.positive;
+            
+            if (this.state.animationFrameId) {
+                cancelAnimationFrame(this.state.animationFrameId);
+            }
+            
+            this.animateManeuver();
+        },
+
+        animateManeuver() {
+            const man = this.state.activeManeuver;
+            if (!man) return;
+            
+            man.animationState = (man.animationState + 0.02) % 2;
+            this.drawManeuver(man);
+            
+            this.state.animationFrameId = requestAnimationFrame(this.animateManeuver.bind(this));
+        },
+        
+        drawManeuver(man) {
+            const canvas = document.getElementById('maneuver-canvas');
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const progress = Math.abs(man.animationState - 1); // Goes 1 -> 0 -> 1
+
+            function drawStickman(x, y, scale, parts) {
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(scale, scale);
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = '#5A5A5A';
+
+                ctx.beginPath();
+                ctx.arc(0, -70, 15, 0, Math.PI * 2);
+                ctx.moveTo(0, -55); ctx.lineTo(0, 0); // Torso
+                ctx.moveTo(0, 0); ctx.lineTo(-20, 50); ctx.lineTo(-25, 100); // Left Leg
+                
+                ctx.moveTo(0, 0); 
+                ctx.lineTo(parts.right_thigh.x, parts.right_thigh.y);
+                ctx.lineTo(parts.right_calf.x, parts.right_calf.y);
+                
+                ctx.moveTo(0, -40); ctx.lineTo(parts.left_arm.x, parts.left_arm.y);
+                
+                ctx.moveTo(0, -40); 
+                ctx.lineTo(parts.right_arm.x, parts.right_arm.y);
+                ctx.lineTo(parts.right_forearm.x, parts.right_forearm.y);
+                
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawArrow(x1, y1, x2, y2, color = 'red') {
+                 const headlen = 10;
+                 const dx = x2 - x1;
+                 const dy = y2 - y1;
+                 const angle = Math.atan2(dy, dx);
+                 ctx.save();
+                 ctx.strokeStyle = color;
+                 ctx.lineWidth = 3;
+                 ctx.beginPath();
+                 ctx.moveTo(x1, y1);
+                 ctx.lineTo(x2, y2);
+                 ctx.lineTo(x2 - headlen * Math.cos(angle - Math.PI / 6), y2 - headlen * Math.sin(angle - Math.PI / 6));
+                 ctx.moveTo(x2, y2);
+                 ctx.lineTo(x2 - headlen * Math.cos(angle + Math.PI / 6), y2 - headlen * Math.sin(angle + Math.PI / 6));
+                 ctx.stroke();
+                 ctx.restore();
+            }
+
+            let parts = {
+                right_thigh: {x: 20, y: 50}, right_calf: {x: 25, y: 100},
+                left_arm: {x: -30, y: -10},
+                right_arm: {x: 30, y: -10}, right_forearm: {x: 50, y: 20}
+            };
+
+            let px = 150, py = 180, scale = 1.2;
+
+            switch(man.name) {
+                case 'Neer':
+                    parts.right_arm = {x: 20 - progress * 10, y: -10 - progress * 70};
+                    parts.right_forearm = {x: 30 - progress * 10, y: 20 - progress * 70};
+                    drawArrow(px + 40, py - 40, px + 10, py - 120);
+                    break;
+                case 'Hawkins-Kennedy':
+                     parts.right_arm = { x: 0, y: -40 };
+                     parts.right_forearm = { x: 50, y: -40 };
+                     ctx.save();
+                     ctx.translate(px, py - 110);
+                     ctx.rotate(progress * -0.5);
+                     ctx.beginPath(); ctx.lineWidth=6; ctx.strokeStyle = '#5A5A5A';
+                     ctx.moveTo(0,0); ctx.lineTo(50,0); ctx.stroke();
+                     ctx.restore();
+                     drawArrow(px + 60, py-110, px + 50, py-90);
+                     parts.right_arm = {x:0, y: -40}; parts.right_forearm = {x:0, y:-40};
+                    break;
+                case 'Jobe (Lata Vazia)':
+                    parts.right_arm = { x: 40, y: -20 };
+                    parts.right_forearm = { x: 50, y: 10 };
+                    drawArrow(px + 55, py - 80, px + 55, py - 50);
+                    break;
+                case 'Gaveta Anterior':
+                case 'Gaveta Posterior':
+                    parts.right_thigh = {x: 40, y: 30};
+                    parts.right_calf = {x: 0, y: 80};
+                    const direction = (man.name === 'Gaveta Anterior') ? 1 : -1;
+                    const shift = progress * 10 * direction;
+                    parts.right_calf.x += shift;
+                    drawArrow(px + 10 + shift, py, px + 10 + 20*direction + shift, py);
+                    break;
+                case 'Lachman':
+                    parts.right_thigh = {x: 25, y: 20};
+                    parts.right_calf = {x: 45 + progress * 10, y: 45};
+                    drawArrow(px + 50, py + 30, px + 70, py + 30);
+                    break;
+                case 'Stress em Valgo':
+                    parts.right_calf = {x: 25 + progress * 20, y: 100};
+                    drawArrow(px + 30, py + 30, px + 50, py + 30);
+                    break;
+                case 'Stress em Varo':
+                    parts.right_calf = {x: 25 - progress * 20, y: 100};
+                    drawArrow(px + 30, py + 30, px + 10, py + 30);
+                    break;
+                case 'Thomas':
+                    parts.right_thigh = {x: 0, y: -40};
+                    parts.right_calf = {x: -30, y: -30};
+                    parts.left_leg_y_offset = progress * 20;
+                    ctx.save();
+                    ctx.translate(px, py);
+                    ctx.scale(scale, scale);
+                    ctx.lineWidth = 6; ctx.strokeStyle = '#5A5A5A';
+                    ctx.beginPath();
+                    ctx.arc(0, -70, 15, 0, Math.PI * 2);
+                    ctx.moveTo(0, -55); ctx.lineTo(0, 0); // Torso
+                    ctx.moveTo(0, 0); ctx.lineTo(-20, 50 - parts.left_leg_y_offset); ctx.lineTo(-25, 100 - parts.left_leg_y_offset); // Left Leg
+                    ctx.moveTo(0, 0); ctx.lineTo(0, -40); ctx.lineTo(-30, -30); // Right Leg
+                    ctx.moveTo(0, -40); ctx.lineTo(30,-10); // Right Arm
+                    ctx.stroke();
+                    ctx.restore();
+                    return;
+                case 'Patrick (FABER)':
+                    parts.right_thigh = {x: -20, y: 50};
+                    parts.right_calf = {x: 20, y: 50};
+                    drawArrow(px, py, px, py+20);
+                    break;
+                case 'Phalen':
+                    parts.right_arm = {x:0, y: 0};
+                    parts.right_forearm = {x: 0, y:30};
+                    parts.left_arm = {x:0, y:0};
+                    // Left forearm
+                    ctx.save(); ctx.translate(px-30*scale,py-10*scale); ctx.scale(scale,scale);
+                    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,30); ctx.stroke(); ctx.restore();
+                    break;
+                case 'Tinel':
+                    drawArrow(px+20, py+30, px, py+30, 'blue');
+                    break;
+            }
+            
+            drawStickman(px, py, scale, parts);
+        }
+    };
+    
+    app.init();
+});
+</script>
+</body>
+</html>
